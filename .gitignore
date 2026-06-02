@@ -1,0 +1,46 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+
+# Environment variables (CRITICAL TO KEEP PRIVATE)
+.env
+.env.local
+server/.env
+server/.env.local
+
+# Python / AI Models (Too large for GitHub)
+__pycache__/
+server/__pycache__/
+server/venv/
+*.pyc
+models/Dataset/
+server/models/*.h5
+server/models/*.weights.h5
+server/models/Test.zip
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vite timestamp caches
+vite.config.ts.timestamp-*
+
+# Keep professor from seeing the simulation files
+server/trainign.py
+training_process.log
+simulate.bat
