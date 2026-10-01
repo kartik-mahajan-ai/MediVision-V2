@@ -12,11 +12,23 @@ const symptomsRoutes = require('./routes/symptoms');
 const chatRoutes = require('./routes/chat');
 const statsRoutes = require('./routes/stats');
 
+const mongoose = require('mongoose');
+
 const app = express();
+
+// Behind a hosting proxy (Render etc.) so rate limiting sees real client IPs
+app.set('trust proxy', 1);
+
+// Allowed frontend origins: local dev + comma-separated CORS_ORIGINS for production
+const allowedOrigins = [
+    'http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081',
+    'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081',
+    ...(process.env.CORS_ORIGINS || '').split(',').map(o => o.trim().replace(/\/+$/, '')).filter(Boolean)
+];
 
 // Enable CORS first so preflight requests are handled properly
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:8081', 'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'],
+    origin: allowedOrigins,
     credentials: true
 }));
 
@@ -62,8 +74,19 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Pings MongoDB so uptime monitors also keep the free Atlas cluster from auto-pausing
+app.get('/api/health', async (req, res) => {
+    let database = 'disconnected';
+    try {
+        if (mongoose.connection.readyState === 1) {
+            await mongoose.connection.db.admin().ping();
+            database = 'connected';
+        }
+    } catch (err) {
+        database = 'error';
+    }
+    res.status(database === 'connected' ? 200 : 503)
+        .json({ status: database === 'connected' ? 'ok' : 'degraded', database, timestamp: new Date().toISOString() });
 });
 
 // Error handling middleware

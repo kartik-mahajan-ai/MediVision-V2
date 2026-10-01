@@ -536,12 +536,12 @@ export default function XRayAnalysis() {
                       {(result?.heatmapImage || result?.heatmaps) ? (
                         <div className="space-y-4">
                           {/* Segmented Control & Actions */}
-                          <div className="flex flex-col xl:flex-row items-center justify-between gap-3 w-full">
-                            <div className="flex w-full xl:w-auto bg-muted/60 p-1 rounded-xl border border-border/50 overflow-hidden">
+                          <div className="flex flex-col items-stretch gap-3 w-full">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 w-full bg-muted/60 p-1 rounded-xl border border-border/50">
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className={cn("flex-1 h-8 rounded-lg transition-all duration-300", viewMode === 'original' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+                                className={cn("min-w-0 h-8 px-2 rounded-lg transition-all duration-300", viewMode === 'original' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
                                 onClick={() => setViewMode('original')}
                               >
                                 <FileImage className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
@@ -550,7 +550,7 @@ export default function XRayAnalysis() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className={cn("flex-1 h-8 rounded-lg transition-all duration-300", viewMode === 'clahe' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+                                className={cn("min-w-0 h-8 px-2 rounded-lg transition-all duration-300", viewMode === 'clahe' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
                                 onClick={() => setViewMode('clahe')}
                               >
                                 <Zap className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
@@ -559,7 +559,7 @@ export default function XRayAnalysis() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className={cn("flex-1 h-8 rounded-lg transition-all duration-300", viewMode === 'mask' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+                                className={cn("min-w-0 h-8 px-2 rounded-lg transition-all duration-300", viewMode === 'mask' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
                                 onClick={() => setViewMode('mask')}
                               >
                                 <Circle className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
@@ -568,7 +568,7 @@ export default function XRayAnalysis() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className={cn("flex-1 h-8 rounded-lg transition-all duration-300", viewMode === 'vision' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-primary")}
+                                className={cn("min-w-0 h-8 px-2 rounded-lg transition-all duration-300", viewMode === 'vision' ? "bg-background text-primary shadow-sm" : "text-muted-foreground hover:text-primary")}
                                 onClick={() => setViewMode('vision')}
                               >
                                 <Brain className="w-4 h-4 mr-1.5 hidden sm:inline-block" />
@@ -578,7 +578,7 @@ export default function XRayAnalysis() {
 
                             <Button
                               size="sm"
-                              className="bg-primary/10 text-primary w-full xl:w-auto hover:bg-primary hover:text-white transition-all group rounded-xl shrink-0"
+                              className="bg-primary/10 text-primary w-full hover:bg-primary hover:text-white transition-all group rounded-xl shrink-0"
                               onClick={() => window.location.href = `/chat?context=last_analysis&prediction=${result.prediction}`}
                             >
                               <MessageSquare className="h-4 w-4 mr-2 group-hover:rotate-12 transition-transform" />

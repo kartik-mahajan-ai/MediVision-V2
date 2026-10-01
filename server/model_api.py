@@ -1,6 +1,6 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import base64
@@ -38,6 +38,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Optional shared secret: when MODEL_API_KEY is set, only callers sending a
+# matching X-API-Key header (the Node backend) may use the prediction endpoints.
+MODEL_API_KEY = os.getenv("MODEL_API_KEY")
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    if MODEL_API_KEY and request.url.path.startswith("/predict") and request.headers.get("x-api-key") != MODEL_API_KEY:
+        return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+    return await call_next(request)
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "model_loaded": xray_model is not None}
 
 # Symptom Classifier Logic
 class SymptomAI:
@@ -651,25 +665,23 @@ def extract_lungs_opencv(img_array):
     return base64.b64encode(buffer).decode('utf-8')
 
 
-def make_gradcam_heatmap(img_array, model, last_conv_layer_name, pred_index=None):
-    # Multi-task model: model.output is [cls_output, seg_output]
+def make_gradcam_heatmap(img_array, model, last_conv_layer_name='relu', pred_index=None):
+    # Multi-task model: model.output is [cls_output, seg_output].
+    # Gradients are taken w.r.t. the pre-softmax logit of the classification head;
+    # softmax saturates at high confidence and makes the gradients vanish.
+    head = model.get_layer('classification_head')
     try:
-        grad_model = keras.models.Model(
-            inputs=[model.inputs],
-            outputs=[model.get_layer(last_conv_layer_name).output, model.output[0]]
-        )
+        conv_output = model.get_layer(last_conv_layer_name).output
     except ValueError:
-        # Fallback if layer is not found
-        grad_model = keras.models.Model(
-            inputs=[model.inputs],
-            outputs=[model.get_layer('relu').output, model.output[0]]
-        )
+        conv_output = model.get_layer('relu').output
+    grad_model = keras.models.Model(inputs=model.inputs, outputs=[conv_output, head.input])
 
     with tf.GradientTape() as tape:
-        last_conv_layer_output, preds = grad_model(img_array)
+        last_conv_layer_output, head_input = grad_model(img_array)
+        logits = tf.matmul(head_input, head.kernel) + head.bias
         if pred_index is None:
-            pred_index = tf.argmax(preds[0])
-        class_channel = preds[:, pred_index]
+            pred_index = tf.argmax(logits[0])
+        class_channel = logits[:, pred_index]
 
     grads = tape.gradient(class_channel, last_conv_layer_output)
     pooled_grads = tf.reduce_mean(grads, axis=(0, 1, 2))
@@ -780,7 +792,7 @@ async def predict_xray(data: ImageData):
             heatmaps = {}
             try:
                 for idx, key in CLASS_MAP.items():
-                    heatmap = make_gradcam_heatmap(processed_image, xray_model, 'conv5_block32_concat', pred_index=idx)
+                    heatmap = make_gradcam_heatmap(processed_image, xray_model, 'relu', pred_index=idx)
                     heatmap_b64 = get_superimposed_heatmap(processed_image, heatmap)
                     heatmaps[key] = f"data:image/png;base64,{heatmap_b64}"
             except Exception as heatmap_err:
@@ -1106,7 +1118,7 @@ async def predict_xray_stream(data: ImageData):
             if xray_model is not None:
                 try:
                     for idx, key in CLASS_MAP.items():
-                        heatmap = make_gradcam_heatmap(processed_image, xray_model, 'conv5_block32_concat', pred_index=idx)
+                        heatmap = make_gradcam_heatmap(processed_image, xray_model, 'relu', pred_index=idx)
                         heatmap_b64 = get_superimposed_heatmap(processed_image, heatmap)
                         heatmaps[key] = f"data:image/png;base64,{heatmap_b64}"
                 except Exception as heatmap_err:
@@ -1249,7 +1261,8 @@ startup_calibration()
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"Starting FastAPI Model API on http://0.0.0.0:8000")
+    port = int(os.getenv("MODEL_API_PORT", "8000"))
+    print(f"Starting FastAPI Model API on http://0.0.0.0:{port}")
     print(f"  Temperature: T={TEMPERATURE:.3f}")
     print(f"  TTA Enabled: {TTA_ENABLED}")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=port)

@@ -1,6 +1,7 @@
 const express = require('express');
 const XRayAnalysis = require('../models/XRayAnalysis');
 const auth = require('../middleware/auth');
+const { MODEL_API_URL, modelApiHeaders } = require('../config/modelApi');
 
 const router = express.Router();
 
@@ -76,8 +77,11 @@ router.post('/upload', auth, async (req, res) => {
         const axios = require('axios');
         let pythonPrediction;
         try {
-            const pythonResponse = await axios.post('http://127.0.0.1:8000/predict/xray', {
+            const pythonResponse = await axios.post(`${MODEL_API_URL}/predict/xray`, {
                 image_data: image_data
+            }, {
+                headers: modelApiHeaders,
+                timeout: 120000
             });
             pythonPrediction = pythonResponse.data;
         } catch (mlError) {
@@ -133,9 +137,10 @@ router.post('/upload/stream', auth, async (req, res) => {
 
         try {
             // Stream from Python ML service
-            const pythonResponse = await axios.post('http://127.0.0.1:8000/predict/xray/stream', {
+            const pythonResponse = await axios.post(`${MODEL_API_URL}/predict/xray/stream`, {
                 image_data: image_data
             }, {
+                headers: modelApiHeaders,
                 responseType: 'stream',
                 timeout: 120000 // 2 minute timeout for large models
             });

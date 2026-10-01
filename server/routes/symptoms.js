@@ -1,6 +1,7 @@
 const express = require('express');
 const SymptomCheck = require('../models/SymptomCheck');
 const auth = require('../middleware/auth');
+const { MODEL_API_URL, modelApiHeaders } = require('../config/modelApi');
 
 const router = express.Router();
 
@@ -55,8 +56,11 @@ router.post('/', auth, async (req, res) => {
         };
 
         try {
-            const response = await axios.post('http://localhost:8000/predict/symptoms', {
+            const response = await axios.post(`${MODEL_API_URL}/predict/symptoms`, {
                 selected_symptoms: symptoms
+            }, {
+                headers: modelApiHeaders,
+                timeout: 120000
             });
             aiResult = response.data;
         } catch (aiError) {

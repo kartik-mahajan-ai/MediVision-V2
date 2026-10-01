@@ -24,6 +24,7 @@ const xrayAnalysisSchema = new mongoose.Schema({
     },
     all_predictions: {
         covid19: Number,
+        non_covid: Number,
         pneumonia: Number,
         normal: Number
     },
